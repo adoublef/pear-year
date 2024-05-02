@@ -4,7 +4,7 @@ create table users (
   name text not null,
   age int not null,
   -- weight todo
-  check (length(name) >= 1 and length(name) <= 30),
+  check (length(name) <= 30),
   check (age >= 0 and age <= 255),
   primary key (id)
 ) strict;

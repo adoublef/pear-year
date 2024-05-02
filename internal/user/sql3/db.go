@@ -59,7 +59,6 @@ and exists (
 	) as h where h.version = @version
 )
 	`
-
 	rs, err := d.RWC.Exec(ctx, q1, sql.Named("name", name), sql.Named("id", id), sql.Named("version", version))
 	if err != nil {
 		return err
@@ -67,6 +66,7 @@ and exists (
 	if n, err := rs.RowsAffected(); err != nil {
 		return err
 	} else if n != 1 {
+		// not found error if a row could not be updated
 		return fmt.Errorf("%d rows where affected", n)
 	}
 	return nil

@@ -9,4 +9,5 @@ type User struct {
 	ID   uuid.UUID
 	Name text.Name
 	Age  uint8
+	Bio  string // can be any length
 }
