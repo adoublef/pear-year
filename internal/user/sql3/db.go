@@ -2,6 +2,7 @@ package sql3
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"fmt"
 
@@ -47,18 +48,19 @@ insert into users (id, name, age) values (?, ?, ?)
 func (d *DB) Rename(ctx context.Context, id uuid.UUID, version int, name text.Name) error {
 	const q1 = `
 update users 
-set name = ? 
-where id = ? 
+set name = @name 
+where id = @id 
 and exists (
 	select 1
 	from (
 		select max(_version) as version
 		from _users_history
-		where user = ?
-	) as h where h.version = ?
+		where user = @id
+	) as h where h.version = @version
 )
 	`
-	rs, err := d.RWC.Exec(ctx, q1, name, id, id, version)
+
+	rs, err := d.RWC.Exec(ctx, q1, sql.Named("name", name), sql.Named("id", id), sql.Named("version", version))
 	if err != nil {
 		return err
 	}
