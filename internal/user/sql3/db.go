@@ -54,25 +54,13 @@ order by _version asc;
 			return user.User{}, wrap(err)
 		}
 
-		switch mask {
-		case 1:
+		if mask&1 != 0 {
 			u.ID = *uid
-		case 2:
+		}
+		if mask&2 != 0 {
 			u.Name = *name
-		case 4:
-			u.Age = *age
-		case 1 | 2:
-			u.ID = *uid
-			u.Name = *name
-		case 1 | 4:
-			u.ID = *uid
-			u.Age = *age
-		case 2 | 4:
-			u.Name = *name
-			u.Age = *age
-		case 1 | 2 | 4:
-			u.ID = *uid
-			u.Name = *name
+		}
+		if mask&4 != 0 {
 			u.Age = *age
 		}
 	}
