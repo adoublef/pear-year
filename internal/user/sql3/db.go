@@ -37,7 +37,6 @@ from _users_history
 where _rowid = (select rowid from users where id = ?) and _version <= ?
 order by _version asc;	
 `
-
 	// if no values then?
 	rs, err := d.RWC.Query(ctx, q1, id, version)
 	if err != nil {
@@ -68,8 +67,9 @@ order by _version asc;
 		case 1 | 4:
 			u.ID = *uid
 			u.Age = *age
-			u.Age = *age
 		case 2 | 4:
+			u.Name = *name
+			u.Age = *age
 		case 1 | 2 | 4:
 			u.ID = *uid
 			u.Name = *name
@@ -79,7 +79,6 @@ order by _version asc;
 	if err := rs.Err(); err != nil {
 		return user.User{}, wrap(err)
 	}
-	log.Printf("u: %v\n", u)
 	return u, nil
 }
 
