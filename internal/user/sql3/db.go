@@ -6,10 +6,14 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"iter"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"go.adoublef.dev/sdk/database/sql3"
+	"go.adoublef.dev/sdk/time/date"
+	"go.adoublef.dev/sdk/time/julian"
 	"go.pear-year.io/internal/user"
 	"go.pear-year.io/text"
 )
@@ -18,42 +22,42 @@ type DB struct {
 	RWC *sql3.DB
 }
 
-func (d *DB) User(ctx context.Context, id uuid.UUID) (u user.User, n int, err error) {
+func (d *DB) User(ctx context.Context, id uuid.UUID) (user.User, uint, error) {
 	const q1 = `
-select u.id, u.name, u.age, u._version from users u where u.id = ?	
+select u.id, u.name, u.dob, u._version from users u where u.id = ?	
 	`
-	err = d.RWC.QueryRow(ctx, q1, id).Scan(&u.ID, &u.Name, &u.Age, &n)
+	var u User
+	var ver uint
+	err := d.RWC.QueryRow(ctx, q1, id).Scan(&u.ID, &u.Name, &u.DOB, &ver)
 	if err != nil {
 		return user.User{}, 0, wrap(err)
 	}
-	return u, n, nil
+	return UserTo(u), ver, nil
 }
 
 // get from a particular version
-func (d *DB) UserFrom(ctx context.Context, id uuid.UUID, version int) (u user.User, err error) {
+func (d *DB) UserFrom(ctx context.Context, id uuid.UUID, ver uint) (user.User, error) {
 	const q1 = `
-select user, name, age, _mask
+select user, name, dob, _mask
 from _users_history
 where _rowid = (select rowid from users where id = ?) and _version <= ?
-order by _version asc;	
+order by _version asc	
 `
-	// select, join, union
-	rs, err := d.RWC.Query(ctx, q1, id, version)
+	rs, err := d.RWC.Query(ctx, q1, id, ver)
 	if err != nil {
 		return user.User{}, wrap(err)
 	}
 	defer rs.Close()
-
+	var u User
 	for rs.Next() {
 		var uid *uuid.UUID
 		var name *text.Name
-		var age *uint8
+		var dob *julian.Time
 		var mask int
-		err := rs.Scan(&uid, &name, &age, &mask)
+		err := rs.Scan(&uid, &name, &dob, &mask)
 		if err != nil {
 			return user.User{}, wrap(err)
 		}
-
 		if mask&1 != 0 {
 			u.ID = *uid
 		}
@@ -61,28 +65,35 @@ order by _version asc;
 			u.Name = *name
 		}
 		if mask&4 != 0 {
-			u.Age = *age
+			u.DOB = *dob
 		}
 	}
 	if err := rs.Err(); err != nil {
 		return user.User{}, wrap(err)
 	}
-	return u, nil
+	if (User{}) == u {
+		return user.User{}, user.ErrNotFound
+	}
+	return UserTo(u), nil
 }
 
-func (d *DB) SetUser(ctx context.Context, name text.Name, age uint8) (uuid.UUID, error) {
+func (d *DB) History(ctx context.Context, id uuid.UUID, ver uint) iter.Seq2[user.User, error] {
+	panic("todo")
+}
+
+func (d *DB) SetUser(ctx context.Context, name text.Name, dob date.Date) (uuid.UUID, error) {
 	const q1 = `
-insert into users (id, name, age, _version) values (?, ?, ?, ?) 
+insert into users (id, name, dob, _version) values (?, ?, ?, ?) 
 	`
 	uid := uuid.Must(uuid.NewV7())
-	_, err := d.RWC.Exec(ctx, q1, uid, name, age, 1)
+	_, err := d.RWC.Exec(ctx, q1, uid, name, julian.FromTime(dob.In(time.UTC)), 1)
 	if err != nil {
 		return uuid.Nil, wrap(err)
 	}
 	return uid, nil
 }
 
-func (d *DB) Rename(ctx context.Context, id uuid.UUID, version int, name text.Name) error {
+func (d *DB) Rename(ctx context.Context, name text.Name, id uuid.UUID, ver uint) error {
 	const q1 = `
 update users set 
 	name = ?
@@ -90,7 +101,7 @@ update users set
 where id = ? 
 and _version = ?
 	`
-	rs, err := d.RWC.Exec(ctx, q1, name, id, version)
+	rs, err := d.RWC.Exec(ctx, q1, name, id, ver)
 	if err != nil {
 		return wrap(err)
 	}
@@ -102,15 +113,15 @@ and _version = ?
 	return nil
 }
 
-func (d *DB) Birthday(ctx context.Context, id uuid.UUID, version int) error {
+func (d *DB) Birthday(ctx context.Context, dob date.Date, id uuid.UUID, ver uint) error {
 	const q1 = `
 update users set
-	age = age + 1
+	dob = ?
 	, _version = _version + 1
 where id = ?
 and _version = ?
-	`
-	rs, err := d.RWC.Exec(ctx, q1, id, version)
+		`
+	rs, err := d.RWC.Exec(ctx, q1, julian.FromTime(dob.In(time.UTC)), id, ver)
 	if err != nil {
 		return wrap(err)
 	}
@@ -140,4 +151,18 @@ func wrap(err error) error {
 		return user.ErrNotFound
 	}
 	return fmt.Errorf("user/sql3: unexpected error: %w", err)
+}
+
+type User struct {
+	ID   uuid.UUID
+	Name text.Name
+	DOB  julian.Time
+}
+
+func UserTo(u User) user.User {
+	return user.User{u.ID, u.Name, date.DateOf(u.DOB.Time())}
+}
+
+func UserFrom(u user.User) User {
+	return User{u.ID, u.Name, julian.FromTime(u.DOB.In(time.UTC))}
 }
