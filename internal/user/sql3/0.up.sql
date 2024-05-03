@@ -7,7 +7,6 @@ create table users (
   _version int not null,
   check (length(name) <= 30)
   check (age >= 0 and age <= 255)
-  check (_version >= 1)
   primary key (id)
 ) strict;
 
@@ -21,7 +20,7 @@ create table _users_history (
   _version int not null,
   -- mask (https://simonwillison.net/2023/Apr/15/sqlite-history/)
   _mask int not null,
-  -- check (_version >= 1),
+  check (_version >= 1)
   -- do i need to include the constraints again?
   foreign key (user) references users (id) -- cascade on delete?
 ) strict;

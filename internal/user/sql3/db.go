@@ -2,7 +2,6 @@ package sql3
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"fmt"
 
@@ -22,7 +21,7 @@ select u.id, u.name, u.age, u._version from users u where u.id = ?
 	`
 	err = d.RWC.QueryRow(ctx, q1, id).Scan(&u.ID, &u.Name, &u.Age, &n)
 	if err != nil {
-		return user.User{}, 0, err
+		return user.User{}, 0, wrap(err)
 	}
 	return u, n, nil
 }
@@ -34,27 +33,27 @@ insert into users (id, name, age, _version) values (?, ?, ?, ?)
 	uid := uuid.Must(uuid.NewV7())
 	_, err := d.RWC.Exec(ctx, q1, uid, name, age, 1)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, wrap(err)
 	}
 	return uid, nil
 }
 
 func (d *DB) Rename(ctx context.Context, id uuid.UUID, version int, name text.Name) error {
 	const q1 = `
-update users set name = @name
+update users set 
+	name = ?
 	, _version = _version + 1
-where id = @id 
-and _version = @version
+where id = ? 
+and _version = ?
 	`
-	rs, err := d.RWC.Exec(ctx, q1, sql.Named("name", name), sql.Named("id", id), sql.Named("version", version))
+	rs, err := d.RWC.Exec(ctx, q1, name, id, version)
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 	if n, err := rs.RowsAffected(); err != nil {
-		return err
+		return wrap(err)
 	} else if n != 1 {
-		// not found error if a row could not be updated
-		return fmt.Errorf("%d rows where affected", n)
+		return user.ErrNotFound
 	}
 	return nil
 }
@@ -68,4 +67,8 @@ func Up(ctx context.Context, filename string) (*DB, error) {
 		return nil, fmt.Errorf("running migration scripts for people domain: %w", err)
 	}
 	return &DB{rwc}, nil
+}
+
+func wrap(err error) error {
+	return err
 }
