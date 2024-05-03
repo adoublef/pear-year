@@ -4,8 +4,10 @@ create table users (
   name text not null,
   age int not null,
   -- weight todo
-  check (length(name) <= 30),
-  check (age >= 0 and age <= 255),
+  _version int not null,
+  check (length(name) <= 30)
+  check (age >= 0 and age <= 255)
+  check (_version >= 1)
   primary key (id)
 ) strict;
 
@@ -19,7 +21,7 @@ create table _users_history (
   _version int not null,
   -- mask (https://simonwillison.net/2023/Apr/15/sqlite-history/)
   _mask int not null,
-  check (_version >= 1),
+  -- check (_version >= 1),
   -- do i need to include the constraints again?
   foreign key (user) references users (id) -- cascade on delete?
 ) strict;
@@ -48,7 +50,7 @@ begin
     , case when old.id != new.id then new.id else null end
     , case when old.name != new.name then new.name else null end
     , case when old.age != new.age then new.age else null end
-    , (select max(_version) from _users_history where _rowid = old.rowid) + 1
+    , old._version
     , (case when old.id != new.id then 1 else 0 end) + (case when old.name != new.name then 2 else 0 end) + (case when old.age != new.age then 4 else 0 end)
   where old.id != new.id or old.name != new.name or old.age != new.age;
 end;

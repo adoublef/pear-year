@@ -18,13 +18,7 @@ type DB struct {
 
 func (d *DB) User(ctx context.Context, id uuid.UUID) (u user.User, n int, err error) {
 	const q1 = `
-select u.*, h.version
-from users u
-left join (
-    select _rowid as rowid, max(_version) as version
-    from _users_history
-    group by _rowid
-) h on u.rowid = h.rowid;	
+select u.id, u.name, u.age, u._version from users u where u.id = ?	
 	`
 	err = d.RWC.QueryRow(ctx, q1, id).Scan(&u.ID, &u.Name, &u.Age, &n)
 	if err != nil {
@@ -35,10 +29,10 @@ left join (
 
 func (d *DB) SetUser(ctx context.Context, name text.Name, age uint8) (uuid.UUID, error) {
 	const q1 = `
-insert into users (id, name, age) values (?, ?, ?) 
+insert into users (id, name, age, _version) values (?, ?, ?, ?) 
 	`
 	uid := uuid.Must(uuid.NewV7())
-	_, err := d.RWC.Exec(ctx, q1, uid, name, age)
+	_, err := d.RWC.Exec(ctx, q1, uid, name, age, 1)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -47,17 +41,10 @@ insert into users (id, name, age) values (?, ?, ?)
 
 func (d *DB) Rename(ctx context.Context, id uuid.UUID, version int, name text.Name) error {
 	const q1 = `
-update users 
-set name = @name 
+update users set name = @name
+	, _version = _version + 1
 where id = @id 
-and exists (
-	select 1
-	from (
-		select max(_version) as version
-		from _users_history
-		where user = @id
-	) as h where h.version = @version
-)
+and _version = @version
 	`
 	rs, err := d.RWC.Exec(ctx, q1, sql.Named("name", name), sql.Named("id", id), sql.Named("version", version))
 	if err != nil {
