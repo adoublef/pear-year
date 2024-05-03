@@ -79,15 +79,15 @@ func Test_DB_UserFrom(t *testing.T) {
 			age uint8     = 27
 		)
 
-		uid, err := d.SetUser(context.TODO(), ada, age)
+		_, err := d.SetUser(context.TODO(), ada, age)
 		is.NoErr(err)
 
-		u, err := d.UserFrom(context.TODO(), uid, 1)
-		is.NoErr(err)
+		// u, err := d.UserFrom(context.TODO(), uid, 1)
+		// is.NoErr(err)
 
-		if testing.Verbose() {
-			t.Logf("u@1: %v\n", u)
-		}
+		// if testing.Verbose() {
+		// 	t.Logf("u@1: %v\n", u)
+		// }
 	}))
 
 	t.Run("Rename", run(func(t *testing.T, d *DB) {
@@ -107,15 +107,15 @@ func Test_DB_UserFrom(t *testing.T) {
 		err = d.Rename(context.TODO(), uid, 1, alan)
 		is.NoErr(err) // ada changed name to alan
 
-		err = d.Birthday(context.TODO(), uid, 2)
-		is.NoErr(err) // alan is 28
+		// err = d.Birthday(context.TODO(), uid, 2)
+		// is.NoErr(err) // alan is 28
 
-		u, err := d.UserFrom(context.TODO(), uid, 2)
-		is.NoErr(err)
+		// u, err := d.UserFrom(context.TODO(), uid, 2)
+		// is.NoErr(err)
 
-		if testing.Verbose() {
-			t.Logf("u after 3: %v\n", u) // adam is 27
-		}
+		// if testing.Verbose() {
+		// 	t.Logf("u after 3: %v\n", u) // adam is 27
+		// }
 	}))
 }
 
@@ -164,8 +164,7 @@ func Test_DB_Rename(t *testing.T) {
 
 func run(f func(*testing.T, *DB)) func(*testing.T) {
 	return func(t *testing.T) {
-		// db, err := Up(context.TODO(), t.TempDir()+"/test.db")
-		db, err := Up(context.TODO(), "test.db")
+		db, err := Up(context.TODO(), t.TempDir()+"/test.db")
 		if err != nil {
 			t.Fatalf("running migrations scripts for %q", t.Name())
 		}

@@ -12,18 +12,15 @@ create table users (
 
 create table _users_history (
   _rowid int,
-  -- all nullable to save space
   user text,
   name text,
   age int,
-  -- optimistic version control
   _version int not null,
   -- mask (https://simonwillison.net/2023/Apr/15/sqlite-history/)
   _mask int not null,
   check (_version >= 1)
-  -- do i need to include the constraints again?
-  foreign key (user) references users (id) -- cascade on delete?
-) strict;
+  primary key (_rowid, _version)
+) without rowid;
 
 create index id_users_history_rowid on _users_history (_rowid);
 
@@ -37,7 +34,7 @@ begin
     new.name,
     new.age,
     1,
-    15
+    (1 << 3) - 1
   );
 end;
 
@@ -50,7 +47,9 @@ begin
     , case when old.name != new.name then new.name else null end
     , case when old.age != new.age then new.age else null end
     , new._version
-    , (case when old.id != new.id then 1 else 0 end) + (case when old.name != new.name then 2 else 0 end) + (case when old.age != new.age then 4 else 0 end)
+    , ((old.id != new.id) << 0) 
+    | ((old.name != new.name) << 2) 
+    | ((old.age != new.age) << 4)
   where old.id != new.id or old.name != new.name or old.age != new.age;
 end;
 

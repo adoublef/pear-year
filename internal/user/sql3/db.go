@@ -6,9 +6,9 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"go.adoublef.dev/sdk/database/sql3"
 	"go.pear-year.io/internal/user"
 	"go.pear-year.io/text"
@@ -31,21 +31,6 @@ select u.id, u.name, u.age, u._version from users u where u.id = ?
 
 // get from a particular version
 func (d *DB) UserFrom(ctx context.Context, id uuid.UUID, version int) (u user.User, err error) {
-	/*
-		SELECT
-			COALESCE(h.user, u.id) AS user_id,
-			CASE WHEN (_mask & 2) != 0 THEN h.name ELSE u.name END AS name,
-			CASE WHEN (_mask & 4) != 0 THEN h.age ELSE u.age END AS age,
-			h._version
-		FROM
-			_users_history AS h
-		LEFT JOIN
-			users AS u ON h.user = u.id OR (h.user IS NULL AND u.id = ?)
-		WHERE
-			(h.user = ? OR h.user IS NULL)
-			AND h._version = ?;
-	*/
-
 	const q1 = `
 select 
     coalesce(h.user, u.id) AS id,
