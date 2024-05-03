@@ -79,11 +79,11 @@ func Test_DB_UserFrom(t *testing.T) {
 			age uint8     = 27
 		)
 
-		_, err := d.SetUser(context.TODO(), ada, age)
+		uid, err := d.SetUser(context.TODO(), ada, age)
 		is.NoErr(err)
 
-		// u, err := d.UserFrom(context.TODO(), uid, 1)
-		// is.NoErr(err)
+		_, err = d.UserFrom(context.TODO(), uid, 3)
+		is.NoErr(err)
 
 		// if testing.Verbose() {
 		// 	t.Logf("u@1: %v\n", u)
@@ -102,20 +102,19 @@ func Test_DB_UserFrom(t *testing.T) {
 		)
 
 		uid, err := d.SetUser(context.TODO(), ada, age)
-		is.NoErr(err)
+		is.NoErr(err) // (name=ada,age=27) (version=1)
 
 		err = d.Rename(context.TODO(), uid, 1, alan)
-		is.NoErr(err) // ada changed name to alan
+		is.NoErr(err) // (name=alan) (version=2)
 
-		// err = d.Birthday(context.TODO(), uid, 2)
-		// is.NoErr(err) // alan is 28
+		err = d.Birthday(context.TODO(), uid, 2)
+		is.NoErr(err) // (name=alan,age=28) (version=3)
 
-		// u, err := d.UserFrom(context.TODO(), uid, 2)
-		// is.NoErr(err)
+		// if version=0 or version=max.Int this still works
+		u, err := d.UserFrom(context.TODO(), uid, 2)
+		is.NoErr(err)
 
-		// if testing.Verbose() {
-		// 	t.Logf("u after 3: %v\n", u) // adam is 27
-		// }
+		is.Equal(u.Age, uint8(27))
 	}))
 }
 

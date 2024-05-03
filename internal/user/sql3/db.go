@@ -32,22 +32,61 @@ select u.id, u.name, u.age, u._version from users u where u.id = ?
 // get from a particular version
 func (d *DB) UserFrom(ctx context.Context, id uuid.UUID, version int) (u user.User, err error) {
 	const q1 = `
-select 
-    coalesce(h.user, u.id) AS id,
-    case when (_mask & 2) != 0 then h.name ELSE u.name end as name,
-    case when (_mask & 4) != 0 then h.age ELSE u.age end as age
-from 
-    _users_history h
-left join
-    users u ON h.user = u.id or (h.user is null and u.id = @id)
-WHERE 
-   (h.user = @id or h.user is null) and h._version = @version;
+select user, name, age, _mask
+from _users_history
+where _rowid = (select rowid from users where id = ?) and _version <= ?
+order by _version asc;	
 `
-	err = d.RWC.QueryRow(ctx, q1, sql.Named("id", id), sql.Named("version", version)).Scan(&u.ID, &u.Name, &u.Age)
+
+	// if no values then?
+	rs, err := d.RWC.Query(ctx, q1, id, version)
 	if err != nil {
 		return user.User{}, wrap(err)
 	}
+	defer rs.Close()
+
+	for rs.Next() {
+		var uid *uuid.UUID
+		var name *text.Name
+		var age *uint8
+		var mask int
+		err := rs.Scan(&uid, &name, &age, &mask)
+		if err != nil {
+			return user.User{}, wrap(err)
+		}
+
+		switch mask {
+		case 1:
+			u.ID = *uid
+		case 2:
+			u.Name = *name
+		case 4:
+			u.Age = *age
+		case 1 | 2:
+			u.ID = *uid
+			u.Name = *name
+		case 1 | 4:
+			u.ID = *uid
+			u.Age = *age
+			u.Age = *age
+		case 2 | 4:
+		case 1 | 2 | 4:
+			u.ID = *uid
+			u.Name = *name
+			u.Age = *age
+		}
+	}
+	if err := rs.Err(); err != nil {
+		return user.User{}, wrap(err)
+	}
+	log.Printf("u: %v\n", u)
 	return u, nil
+}
+
+type User struct {
+	ID   *uuid.UUID
+	Name *text.Name
+	Age  *uint8
 }
 
 func (d *DB) SetUser(ctx context.Context, name text.Name, age uint8) (uuid.UUID, error) {

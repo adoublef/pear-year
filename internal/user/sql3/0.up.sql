@@ -22,8 +22,6 @@ create table _users_history (
   primary key (_rowid, _version)
 ) without rowid;
 
-create index id_users_history_rowid on _users_history (_rowid);
-
 create trigger users_insert_history 
 after insert on users
 begin
@@ -48,8 +46,8 @@ begin
     , case when old.age != new.age then new.age else null end
     , new._version
     , ((old.id != new.id) << 0) 
-    | ((old.name != new.name) << 2) 
-    | ((old.age != new.age) << 4)
+    | ((old.name != new.name) << 1) 
+    | ((old.age != new.age) << 2)
   where old.id != new.id or old.name != new.name or old.age != new.age;
 end;
 
