@@ -49,7 +49,7 @@ begin
     , case when old.id != new.id then new.id else null end
     , case when old.name != new.name then new.name else null end
     , case when old.age != new.age then new.age else null end
-    , old._version
+    , new._version
     , (case when old.id != new.id then 1 else 0 end) + (case when old.name != new.name then 2 else 0 end) + (case when old.age != new.age then 4 else 0 end)
   where old.id != new.id or old.name != new.name or old.age != new.age;
 end;
