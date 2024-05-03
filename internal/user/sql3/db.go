@@ -37,7 +37,7 @@ from _users_history
 where _rowid = (select rowid from users where id = ?) and _version <= ?
 order by _version asc;	
 `
-	// if no values then?
+	// select, join, union
 	rs, err := d.RWC.Query(ctx, q1, id, version)
 	if err != nil {
 		return user.User{}, wrap(err)
