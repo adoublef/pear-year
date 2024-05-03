@@ -114,6 +114,7 @@ func Test_DB_UserFrom(t *testing.T) {
 		u, err := d.UserFrom(context.TODO(), uid, 2)
 		is.NoErr(err)
 
+		is.Equal(u.Name, alan)
 		is.Equal(u.Age, uint8(27))
 	}))
 }

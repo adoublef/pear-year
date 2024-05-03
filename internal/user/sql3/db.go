@@ -70,12 +70,6 @@ order by _version asc;
 	return u, nil
 }
 
-type User struct {
-	ID   *uuid.UUID
-	Name *text.Name
-	Age  *uint8
-}
-
 func (d *DB) SetUser(ctx context.Context, name text.Name, age uint8) (uuid.UUID, error) {
 	const q1 = `
 insert into users (id, name, age, _version) values (?, ?, ?, ?) 
