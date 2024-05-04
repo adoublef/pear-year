@@ -251,18 +251,3 @@ func UserTo(u User) user.User {
 func UserOf(u user.User) User {
 	return User{u.ID, u.Name, julian.FromTime(u.DOB.In(time.UTC)), u.Role}
 }
-
-/*
-
-select id, name, dob, role, _version, (1<<4)-1 as _mask
-from users
-where id = '018f4169-e9d0-7d6d-ac2c-e55db37e03e4'
-
-union
-
-select user as id, name, dob, role, _version, _mask
-from _users_history
-where _rowid = (select rowid from users where id = '018f4169-e9d0-7d6d-ac2c-e55db37e03e4') and _version >= 0
-order by _version desc;
-
-*/

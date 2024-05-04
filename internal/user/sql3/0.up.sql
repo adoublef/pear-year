@@ -18,24 +18,8 @@ create table _users_history (
   , role text
   , _version int not null
   , _mask int not null
-  -- , check (_version >= 1)
   , primary key (_rowid, _version)
 ) without rowid;
-
--- create trigger users_insert_history 
--- after insert on users
--- begin
---   insert into _users_history (_rowid, user, name, dob, role, _version, _mask)
---   values (
---     new.rowid
---     , null
---     , null
---     , null
---     , null
---     , new._version - 1
---     , 0
---   );
--- end;
 
 create trigger users_update_history
 after update on users for each row
