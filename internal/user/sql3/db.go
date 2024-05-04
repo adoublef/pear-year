@@ -36,7 +36,7 @@ select u.id, u.name, u.dob, u.role, u._version from users u where u.id = ?
 }
 
 // get from a particular version
-func (d *DB) UserFrom(ctx context.Context, id uuid.UUID, ver uint) (user.User, error) {
+func (d *DB) UserAt(ctx context.Context, id uuid.UUID, ver uint) (user.User, error) {
 	const q1 = `
 select user, name, dob, role, _mask
 from _users_history
@@ -160,7 +160,7 @@ where id = ? and _version = ?
 	return nil
 }
 
-func (d *DB) AlterDOB(ctx context.Context, dob date.Date, id uuid.UUID, ver uint) error {
+func (d *DB) SetDOB(ctx context.Context, dob date.Date, id uuid.UUID, ver uint) error {
 	const q1 = `
 update users set
 	dob = ?
@@ -179,7 +179,7 @@ where id = ? and _version = ?
 	return nil
 }
 
-func (d *DB) AlterRole(ctx context.Context, role user.Role, id uuid.UUID, ver uint8) error {
+func (d *DB) SetRole(ctx context.Context, role user.Role, id uuid.UUID, ver uint8) error {
 	const q1 = `
 update users set
 	role = ?

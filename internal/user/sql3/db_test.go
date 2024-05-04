@@ -83,7 +83,7 @@ func Test_DB_UserFrom(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err)
 
-		_, err = d.UserFrom(context.TODO(), uid, 3)
+		_, err = d.UserAt(context.TODO(), uid, 3)
 		is.NoErr(err)
 	}))
 
@@ -99,7 +99,7 @@ func Test_DB_UserFrom(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err) // (name=ada,age=27) (version=1)
 
-		_, err = d.UserFrom(context.TODO(), uid, 0)
+		_, err = d.UserAt(context.TODO(), uid, 0)
 		is.Err(err, user.ErrNotFound)
 	}))
 
@@ -121,14 +121,14 @@ func Test_DB_UserFrom(t *testing.T) {
 		err = d.Rename(context.TODO(), alan, uid, 1)
 		is.NoErr(err) // (version=2)
 
-		err = d.AlterDOB(context.TODO(), dob2, uid, 2)
+		err = d.SetDOB(context.TODO(), dob2, uid, 2)
 		is.NoErr(err) // (version=3)
 
-		err = d.AlterRole(context.TODO(), user.Admin, uid, 3)
+		err = d.SetRole(context.TODO(), user.Admin, uid, 3)
 		is.NoErr(err) // (version=4)
 
 		// if version=0 or version=max.Int this still works
-		u, err := d.UserFrom(context.TODO(), uid, 3)
+		u, err := d.UserAt(context.TODO(), uid, 3)
 		is.NoErr(err)
 
 		is.Equal(u.Name, alan)
@@ -199,7 +199,7 @@ func Test_DB_History(t *testing.T) {
 		err = d.Rename(context.TODO(), alan, uid, 1)
 		is.NoErr(err) // (version=2)
 
-		err = d.AlterDOB(context.TODO(), dob2, uid, 2)
+		err = d.SetDOB(context.TODO(), dob2, uid, 2)
 		is.NoErr(err) // (version=3)
 
 		hist, err := d.History(context.TODO(), uid, 5) // just needs to be greater than 3
