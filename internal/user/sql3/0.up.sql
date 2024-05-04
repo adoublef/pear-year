@@ -1,26 +1,25 @@
 create table users (
   -- format as uuid-v7
-  id text,
-  name text not null,
-  dob real not null,
-  role text not null,
-  _version int not null,
-  check (length(name) <= 30)
-  check (role in ('Guest', 'Support', 'Admin'))
-  primary key (id)
+  id text
+  , name text not null
+  , dob real not null
+  , role text not null
+  , _version int not null
+  , check (length(name) <= 30)
+  , check (role in ('Guest', 'Support', 'Admin'))
+  , primary key (id)
 ) strict;
 
 create table _users_history (
-  _rowid int,
-  user text,
-  name text,
-  dob real,
-  role text,
-  _version int not null,
-  -- mask (https://simonwillison.net/2023/Apr/15/sqlite-history/)
-  _mask int not null,
-  check (_version >= 1)
-  primary key (_rowid, _version)
+  _rowid int
+  , user text
+  , name text
+  , dob real
+  , role text
+  , _version int not null
+  , _mask int not null
+  , check (_version >= 1)
+  , primary key (_rowid, _version)
 ) without rowid;
 
 create trigger users_insert_history 
@@ -28,13 +27,13 @@ after insert on users
 begin
   insert into _users_history (_rowid, user, name, dob, role, _version, _mask)
   values (
-    new.rowid,
-    new.id,
-    new.name,
-    new.dob,
-    new.role,
-    1,
-    (1 << 4) - 1
+    new.rowid
+    , new.id
+    , new.name
+    , new.dob
+    , new.role
+    , new._version
+    , (1 << 4) - 1
   );
 end;
 
