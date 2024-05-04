@@ -84,7 +84,7 @@ func Test_DB_UserAt(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err)
 
-		u, err := d.UserAt(context.TODO(), uid, 1)
+		u, err := d.UserAt(context.TODO(), uid, 0)
 		is.NoErr(err)
 
 		if testing.Verbose() {
@@ -121,26 +121,26 @@ func Test_DB_UserAt(t *testing.T) {
 		)
 
 		uid, err := d.SetUser(context.TODO(), ada, dob)
-		is.NoErr(err) //  (version=1)
+		is.NoErr(err) //  (version=0)
 
-		err = d.Rename(context.TODO(), alan, uid, 1)
+		err = d.Rename(context.TODO(), alan, uid, 0)
+		is.NoErr(err) // (version=1)
+
+		err = d.SetDOB(context.TODO(), dob2, uid, 1)
 		is.NoErr(err) // (version=2)
 
-		err = d.SetDOB(context.TODO(), dob2, uid, 2)
+		err = d.SetRole(context.TODO(), user.Admin, uid, 2)
 		is.NoErr(err) // (version=3)
-
-		err = d.SetRole(context.TODO(), user.Admin, uid, 3)
-		is.NoErr(err) // (version=4)
 
 		// if version=0 or version=max.Int this still works
 		u, err := d.UserAt(context.TODO(), uid, 1)
 		is.NoErr(err)
 
-		is.Equal(u.Name, ada)
+		is.Equal(u.Name, alan)
 		is.Equal(u.DOB, dob)
 		is.Equal(u.Role, user.Guest)
 
-		u, err = d.UserAt(context.TODO(), uid, 4)
+		u, err = d.UserAt(context.TODO(), uid, 3)
 		is.NoErr(err)
 
 		is.Equal(u.Name, alan)
@@ -164,7 +164,7 @@ func Test_DB_Rename(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err)
 
-		err = d.Rename(context.TODO(), alan, uid, 1)
+		err = d.Rename(context.TODO(), alan, uid, 0)
 		is.NoErr(err) // rename user
 
 		_, n, err := d.User(context.TODO(), uid)
@@ -208,16 +208,16 @@ func Test_DB_History(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err) //  (version=1)
 
-		err = d.Rename(context.TODO(), alan, uid, 1)
+		err = d.Rename(context.TODO(), alan, uid, 0)
 		is.NoErr(err) // (version=2)
 
-		err = d.SetDOB(context.TODO(), dob2, uid, 2)
+		err = d.SetDOB(context.TODO(), dob2, uid, 1)
 		is.NoErr(err) // (version=3)
 
-		err = d.SetRole(context.TODO(), user.Admin, uid, 3)
+		err = d.SetRole(context.TODO(), user.Admin, uid, 2)
 		is.NoErr(err) // (version=4)
 
-		hist, err := d.History(context.TODO(), uid, 0) // just needs to be greater than 3
+		hist, err := d.History(context.TODO(), uid, 0)
 		is.NoErr(err)
 		is.Equal(len(hist), 4)
 

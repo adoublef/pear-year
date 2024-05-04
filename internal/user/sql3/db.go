@@ -47,10 +47,10 @@ func (d *DB) UserAt(ctx context.Context, id uuid.UUID, ver uint) (user.User, err
 	const q1 = `
 select user, name, dob, role, _mask
 from _users_history
-where _rowid = (select rowid from users where id = ?) and _version >= ?
-order by _version desc	
+where _rowid = (select rowid from users where id = ?) and _version <= ? 
+order by _version desc limit ?
 `
-	rs, err := d.RWC.Query(ctx, q1, id, ver)
+	rs, err := d.RWC.Query(ctx, q1, id, lv, lv-ver)
 	if err != nil {
 		return user.User{}, wrap(err)
 	}
@@ -102,8 +102,7 @@ func (d *DB) History(ctx context.Context, id uuid.UUID, ver uint) ([]user.User, 
 select user, name, dob, role, _mask
 from _users_history
 where _rowid = (select rowid from users where id = ?) and _version <= ? 
-order by _version desc		
-limit ?
+order by _version desc limit ?
 `
 	rs, err := d.RWC.Query(ctx, q1, id, lv, lv-ver)
 	if err != nil {
@@ -150,7 +149,7 @@ func (d *DB) SetUser(ctx context.Context, name text.Name, dob date.Date) (uuid.U
 insert into users (id, name, dob, role, _version) values (?, ?, ?, ?, ?) 
 `
 	uid := uuid.Must(uuid.NewV7())
-	_, err := d.RWC.Exec(ctx, q1, uid, name, julian.FromTime(dob.In(time.UTC)), user.Guest, 1)
+	_, err := d.RWC.Exec(ctx, q1, uid, name, julian.FromTime(dob.In(time.UTC)), user.Guest, 0)
 	if err != nil {
 		return uuid.Nil, wrap(err)
 	}
