@@ -121,15 +121,19 @@ func Test_DB_UserFrom(t *testing.T) {
 		err = d.Rename(context.TODO(), alan, uid, 1)
 		is.NoErr(err) // (version=2)
 
-		err = d.Birthday(context.TODO(), dob2, uid, 2)
+		err = d.AlterDOB(context.TODO(), dob2, uid, 2)
 		is.NoErr(err) // (version=3)
 
+		err = d.AlterRole(context.TODO(), user.Admin, uid, 3)
+		is.NoErr(err) // (version=4)
+
 		// if version=0 or version=max.Int this still works
-		u, err := d.UserFrom(context.TODO(), uid, 2)
+		u, err := d.UserFrom(context.TODO(), uid, 3)
 		is.NoErr(err)
 
 		is.Equal(u.Name, alan)
-		is.Equal(u.DOB, dob)
+		is.Equal(u.DOB, dob2)
+		is.Equal(u.Role, user.Guest)
 	}))
 }
 
@@ -173,6 +177,34 @@ func Test_DB_Rename(t *testing.T) {
 
 		err = d.Rename(context.TODO(), alan, uid, 2)
 		is.Err(err, user.ErrNotFound)
+	}))
+}
+
+func Test_DB_History(t *testing.T) {
+	t.Run("OK", run(func(t *testing.T, d *DB) {
+		is := is.NewRelaxed(t)
+
+		// insert user args
+		var (
+			ada text.Name = "Ada Lovelace"
+			dob           = must(date.Parse("1818-10-12"))
+
+			alan text.Name = "Alan Turing" // June 23, 1912.
+			dob2           = must(date.Parse("1912-06-23"))
+		)
+
+		uid, err := d.SetUser(context.TODO(), ada, dob)
+		is.NoErr(err) //  (version=1)
+
+		err = d.Rename(context.TODO(), alan, uid, 1)
+		is.NoErr(err) // (version=2)
+
+		err = d.AlterDOB(context.TODO(), dob2, uid, 2)
+		is.NoErr(err) // (version=3)
+
+		hist, err := d.History(context.TODO(), uid, 5) // just needs to be greater than 3
+		is.NoErr(err)
+		is.Equal(len(hist), 3)
 	}))
 }
 

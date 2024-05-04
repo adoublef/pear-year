@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"go.adoublef.dev/sdk/time/date"
@@ -16,7 +17,12 @@ type User struct {
 	ID   uuid.UUID
 	Name text.Name
 	DOB  date.Date
+	Role Role
 	// Bio  string // can be any length
+}
+
+func (u User) String() string {
+	return fmt.Sprintf("User(role=%s, name=%s, age=%d)", u.Role, u.Name, u.Age())
 }
 
 func (u User) Age() uint8 {
