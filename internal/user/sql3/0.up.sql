@@ -18,35 +18,35 @@ create table _users_history (
   , role text
   , _version int not null
   , _mask int not null
-  , check (_version >= 1)
+  -- , check (_version >= 1)
   , primary key (_rowid, _version)
 ) without rowid;
 
-create trigger users_insert_history 
-after insert on users
-begin
-  insert into _users_history (_rowid, user, name, dob, role, _version, _mask)
-  values (
-    new.rowid
-    , new.id
-    , new.name
-    , new.dob
-    , new.role
-    , new._version
-    , (1 << 4) - 1
-  );
-end;
+-- create trigger users_insert_history 
+-- after insert on users
+-- begin
+--   insert into _users_history (_rowid, user, name, dob, role, _version, _mask)
+--   values (
+--     new.rowid
+--     , null
+--     , null
+--     , null
+--     , null
+--     , new._version - 1
+--     , 0
+--   );
+-- end;
 
 create trigger users_update_history
 after update on users for each row
 begin
   insert into _users_history (_rowid, user, name, dob, role, _version, _mask)
   select old.rowid
-    , case when old.id != new.id then new.id else null end
-    , case when old.name != new.name then new.name else null end
-    , case when old.dob != new.dob then new.dob else null end
-    , case when old.role != new.role then new.role else null end
-    , new._version
+    , case when old.id != new.id then old.id else null end
+    , case when old.name != new.name then old.name else null end
+    , case when old.dob != new.dob then old.dob else null end
+    , case when old.role != new.role then old.role else null end
+    , new._version - 1
     , ((old.id != new.id) << 0) 
     | ((old.name != new.name) << 1) 
     | ((old.dob != new.dob) << 2)

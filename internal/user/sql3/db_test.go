@@ -2,6 +2,7 @@ package sql3_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -70,7 +71,7 @@ func Test_DB_User(t *testing.T) {
 	}))
 }
 
-func Test_DB_UserFrom(t *testing.T) {
+func Test_DB_UserAt(t *testing.T) {
 	t.Run("OK", run(func(t *testing.T, d *DB) {
 		is := is.NewRelaxed(t)
 
@@ -83,8 +84,12 @@ func Test_DB_UserFrom(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err)
 
-		_, err = d.UserAt(context.TODO(), uid, 3)
+		u, err := d.UserAt(context.TODO(), uid, 1)
 		is.NoErr(err)
+
+		if testing.Verbose() {
+			t.Logf("u: %v\n", u)
+		}
 	}))
 
 	t.Run("ErrNotFound", run(func(t *testing.T, d *DB) {
@@ -99,7 +104,7 @@ func Test_DB_UserFrom(t *testing.T) {
 		uid, err := d.SetUser(context.TODO(), ada, dob)
 		is.NoErr(err) // (name=ada,age=27) (version=1)
 
-		_, err = d.UserAt(context.TODO(), uid, 0)
+		_, err = d.UserAt(context.TODO(), uid, 10)
 		is.Err(err, user.ErrNotFound)
 	}))
 
@@ -128,12 +133,19 @@ func Test_DB_UserFrom(t *testing.T) {
 		is.NoErr(err) // (version=4)
 
 		// if version=0 or version=max.Int this still works
-		u, err := d.UserAt(context.TODO(), uid, 3)
+		u, err := d.UserAt(context.TODO(), uid, 1)
+		is.NoErr(err)
+
+		is.Equal(u.Name, ada)
+		is.Equal(u.DOB, dob)
+		is.Equal(u.Role, user.Guest)
+
+		u, err = d.UserAt(context.TODO(), uid, 4)
 		is.NoErr(err)
 
 		is.Equal(u.Name, alan)
 		is.Equal(u.DOB, dob2)
-		is.Equal(u.Role, user.Guest)
+		is.Equal(u.Role, user.Admin)
 	}))
 }
 
@@ -202,15 +214,24 @@ func Test_DB_History(t *testing.T) {
 		err = d.SetDOB(context.TODO(), dob2, uid, 2)
 		is.NoErr(err) // (version=3)
 
-		hist, err := d.History(context.TODO(), uid, 5) // just needs to be greater than 3
+		err = d.SetRole(context.TODO(), user.Admin, uid, 3)
+		is.NoErr(err) // (version=4)
+
+		hist, err := d.History(context.TODO(), uid, 0) // just needs to be greater than 3
 		is.NoErr(err)
-		is.Equal(len(hist), 3)
+		is.Equal(len(hist), 4)
+
+		if testing.Verbose() {
+			for _, u := range hist {
+				t.Logf("u: %v\n", u)
+			}
+		}
 	}))
 }
 
 func run(f func(*testing.T, *DB)) func(*testing.T) {
 	return func(t *testing.T) {
-		db, err := Up(context.TODO(), t.TempDir()+"/test.db")
+		db, err := Up(context.TODO(), filepath.Join(t.TempDir(), "test.db"))
 		if err != nil {
 			t.Fatalf("running migrations scripts for %q", t.Name())
 		}
@@ -225,13 +246,3 @@ func must[T any](v T, err error) T {
 	}
 	return v
 }
-
-/*
-rowid | id | name | dob | role | _version
-1 | 'A' | 'alan turing' | '1818-10-12' | 'Admin' | 2
-
-_rowid | user | name | dob | role | _version | _mask
-1 | null | null | null | null | 0 | 1111
-1 | null | null | null | 'Guest' | 1 | 1000
-1 | 'ada lovelace' | null | null | null | 2 | 0001
-*/

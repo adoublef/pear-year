@@ -37,18 +37,25 @@ select u.id, u.name, u.dob, u.role, u._version from users u where u.id = ?
 
 // get from a particular version
 func (d *DB) UserAt(ctx context.Context, id uuid.UUID, ver uint) (user.User, error) {
+	latest, lv, err := d.User(ctx, id)
+	if err != nil {
+		return user.User{}, wrap(err)
+	}
+	if ver > lv {
+		return user.User{}, user.ErrNotFound
+	}
 	const q1 = `
 select user, name, dob, role, _mask
 from _users_history
-where _rowid = (select rowid from users where id = ?) and _version <= ?
-order by _version asc	
+where _rowid = (select rowid from users where id = ?) and _version >= ?
+order by _version desc	
 `
 	rs, err := d.RWC.Query(ctx, q1, id, ver)
 	if err != nil {
 		return user.User{}, wrap(err)
 	}
 	defer rs.Close()
-	var u User
+	var u = UserOf(latest)
 	for rs.Next() {
 		var uid *uuid.UUID
 		var name *text.Name
@@ -82,19 +89,28 @@ order by _version asc
 }
 
 func (d *DB) History(ctx context.Context, id uuid.UUID, ver uint) ([]user.User, error) {
+	var uu []user.User
+	latest, lv, err := d.User(ctx, id)
+	if err != nil {
+		return nil, wrap(err)
+	}
+	if ver > lv {
+		return nil, user.ErrNotFound
+	}
+	uu = append(uu, latest)
 	const q1 = `
 select user, name, dob, role, _mask
 from _users_history
-where _rowid = (select rowid from users where id = ?) and _version <= ?
-order by _version asc	
+where _rowid = (select rowid from users where id = ?) and _version <= ? 
+order by _version desc		
+limit ?
 `
-	rs, err := d.RWC.Query(ctx, q1, id, ver)
+	rs, err := d.RWC.Query(ctx, q1, id, lv, lv-ver)
 	if err != nil {
 		return nil, wrap(err)
 	}
 	defer rs.Close()
-	var uu []user.User
-	var u User // mutable
+	var u = UserOf(latest) // mutable
 	for rs.Next() {
 		var uid *uuid.UUID
 		var name *text.Name
@@ -229,6 +245,6 @@ func UserTo(u User) user.User {
 	return user.User{u.ID, u.Name, date.DateOf(u.DOB.Time()), u.Role}
 }
 
-func UserFrom(u user.User) User {
+func UserOf(u user.User) User {
 	return User{u.ID, u.Name, julian.FromTime(u.DOB.In(time.UTC)), u.Role}
 }
