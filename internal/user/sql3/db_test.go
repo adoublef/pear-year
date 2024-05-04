@@ -225,3 +225,13 @@ func must[T any](v T, err error) T {
 	}
 	return v
 }
+
+/*
+rowid | id | name | dob | role | _version
+1 | 'A' | 'alan turing' | '1818-10-12' | 'Admin' | 2
+
+_rowid | user | name | dob | role | _version | _mask
+1 | null | null | null | null | 0 | 1111
+1 | null | null | null | 'Guest' | 1 | 1000
+1 | 'ada lovelace' | null | null | null | 2 | 0001
+*/
