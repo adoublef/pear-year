@@ -38,18 +38,19 @@ select u.id, u.name, u.dob, u.role, u._version from users u where u.id = ?
 // get from a particular version
 func (d *DB) UserAt(ctx context.Context, id uuid.UUID, ver uint) (user.User, error) {
 	const q1 = `
-select id, name, dob, role, _mask 
-from (
+with cte as (
 	select id, name, dob, role, _version, (1<<4)-1 as _mask
 	from users
 	where id = @id
-
+	
 	union
-
+	
 	select user as id, name, dob, role, _version, _mask
 	from _users_history
 	where _rowid = (select rowid from users where id = @id) and _version >= @version
-) as agg
+)
+select id, name, dob, role, _mask 
+from cte
 order by _version desc
 `
 	rs, err := d.RWC.Query(ctx, q1, sql.Named("id", id), sql.Named("version", ver))
@@ -92,18 +93,19 @@ order by _version desc
 
 func (d *DB) History(ctx context.Context, id uuid.UUID, ver uint) ([]user.User, error) {
 	const q1 = `
-select id, name, dob, role, _mask 
-from (
+with cte as (
 	select id, name, dob, role, _version, (1<<4)-1 as _mask
 	from users
 	where id = @id
-
+	
 	union
-
+	
 	select user as id, name, dob, role, _version, _mask
 	from _users_history
 	where _rowid = (select rowid from users where id = @id) and _version >= @version
-) as agg
+)
+select id, name, dob, role, _mask 
+from cte
 order by _version desc
 `
 	rs, err := d.RWC.Query(ctx, q1, sql.Named("id", id), sql.Named("version", ver))
